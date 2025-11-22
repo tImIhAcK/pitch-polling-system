@@ -5,17 +5,111 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pitch Polling System</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes slideIn {
+      from { transform: translateX(-100%); }
+      to { transform: translateX(0); }
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    .fade-in {
+      animation: fadeIn 0.6s ease-out forwards;
+    }
+    .slide-in {
+      animation: slideIn 0.8s ease-out forwards;
+    }
+    .card-hover {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .card-hover:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .glass {
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    .progress-bar {
+      transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+  </style>
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
-  <div id="app" class="p-6">
-    <div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl p-8">
-      <h1 class="text-3xl font-bold text-gray-800 mb-2">Pitch Polling System</h1>
-      <p class="text-gray-600 mb-6">Vote for the best startup pitch. You can only vote once!</p>
-      
-      <div id="status" class="mb-6"></div>
-      <div id="totalVotes" class="mb-6 text-gray-600"></div>
-      <div id="pitches" class="space-y-4"></div>
-      <div id="tip" class="mt-6"></div>
+<body class="min-h-screen bg-gradient-to-br from-indigo-100 via-purple-50 to-pink-100 relative overflow-x-hidden">
+  <!-- Animated Background Elements -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none">
+    <div class="absolute top-20 left-10 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
+    <div class="absolute top-40 right-10 w-72 h-72 bg-yellow-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse" style="animation-delay: 2s;"></div>
+    <div class="absolute -bottom-8 left-20 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse" style="animation-delay: 4s;"></div>
+  </div>
+
+  <div id="app" class="relative z-10 p-4 sm:p-6 lg:p-8">
+    <div class="max-w-5xl mx-auto">
+      <!-- Header -->
+      <div class="text-center mb-8 fade-in">
+        <div class="inline-block mb-4">
+          <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">
+            🚀 Live Voting
+          </div>
+        </div>
+        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold gradient-text mb-4">
+          Pitch Polling System
+        </h1>
+        <p class="text-gray-600 text-lg max-w-2xl mx-auto">
+          Vote for the best startup pitch and watch the results in real-time. Each person gets one vote!
+        </p>
+      </div>
+
+      <!-- Main Content Card -->
+      <div class="glass rounded-3xl shadow-2xl p-6 sm:p-8 lg:p-10 fade-in" style="animation-delay: 0.2s;">
+        
+        <!-- Status Message -->
+        <div id="status" class="mb-6"></div>
+
+        <!-- Stats Bar -->
+        <div id="statsBar" class="mb-8 p-6 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl text-white shadow-lg">
+          <div class="flex items-center justify-between flex-wrap gap-4">
+            <div class="flex items-center gap-3">
+              <div class="bg-white bg-opacity-20 p-3 rounded-xl">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              <div>
+                <p class="text-white text-opacity-80 text-sm">Total Votes</p>
+                <p id="totalVotes" class="text-3xl font-bold">0</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2" id="liveIndicator">
+              <div class="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+              <span class="text-sm font-medium">Live Results</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pitches Container -->
+        <div id="pitches" class="space-y-6"></div>
+
+        <!-- Tip Message -->
+        <div id="tip" class="mt-8"></div>
+      </div>
+
+      <!-- Footer -->
+      <div class="mt-8 text-center text-gray-600 text-sm fade-in" style="animation-delay: 0.4s;">
+        <p>Powered by modern web technology • Secure & Real-time</p>
+      </div>
     </div>
   </div>
 
@@ -40,7 +134,13 @@
         renderPitches(data.pitches);
       } catch (error) {
         console.error('Error loading pitches:', error);
-        document.getElementById('pitches').innerHTML = '<p class="text-red-600">Failed to load pitches</p>';
+        document.getElementById('pitches').innerHTML = `
+          <div class="text-center p-8">
+            <div class="text-red-500 text-6xl mb-4">⚠️</div>
+            <p class="text-red-600 font-semibold text-lg">Failed to load pitches</p>
+            <p class="text-gray-500 mt-2">Please refresh the page</p>
+          </div>
+        `;
       }
     }
 
@@ -56,14 +156,36 @@
 
     function showStatus() {
       document.getElementById('status').innerHTML = `
-        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
-          <p class="text-green-800 font-medium">✓ Thank you for voting! Your vote has been recorded.</p>
+        <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-2xl p-5 shadow-lg slide-in">
+          <div class="flex items-center gap-3">
+            <div class="flex-shrink-0">
+              <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+                <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            </div>
+            <div>
+              <p class="text-green-800 font-bold text-lg">Vote Recorded!</p>
+              <p class="text-green-700 text-sm">Thank you for participating. Results are shown below.</p>
+            </div>
+          </div>
         </div>
       `;
     }
 
     async function vote(pitchId) {
       if (hasVoted) return;
+
+      // Optimistic UI update
+      const button = event.target.closest('button');
+      button.disabled = true;
+      button.innerHTML = `
+        <svg class="animate-spin h-5 w-5 mx-auto" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+      `;
 
       try {
         const res = await fetch(`${API_BASE}/api/vote`, {
@@ -95,6 +217,8 @@
         renderPitches(data.pitches);
       } catch (error) {
         console.error('Error voting:', error);
+        button.disabled = false;
+        button.innerHTML = '👍 Vote';
         alert('Failed to submit vote. Please try again.');
       }
     }
@@ -103,33 +227,45 @@
       const totalVotes = pitches.reduce((sum, p) => sum + p.votes, 0);
       const sorted = [...pitches].sort((a, b) => b.votes - a.votes);
 
-      document.getElementById('totalVotes').innerHTML = `
-        <span class="font-medium">👥 ${totalVotes} total votes</span>
-      `;
+      document.getElementById('totalVotes').textContent = totalVotes;
 
       document.getElementById('pitches').innerHTML = sorted.map((pitch, index) => {
         const percentage = totalVotes > 0 ? (pitch.votes / totalVotes * 100).toFixed(1) : 0;
         const isVoted = pitch.id === votedPitchId;
+        const isLeading = hasVoted && index === 0 && pitch.votes > 0;
 
         return `
-          <div class="border-2 ${isVoted ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200'} rounded-xl p-5">
-            <div class="flex items-start justify-between gap-4">
-              <div class="flex-1">
-                <div class="flex items-center gap-2 mb-2">
-                  ${hasVoted && index === 0 && pitch.votes > 0 ? '<span class="bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded">🏆 LEADING</span>' : ''}
-                  <h3 class="text-xl font-semibold text-gray-800">${pitch.title}</h3>
+          <div class="card-hover border-2 ${isVoted ? 'border-indigo-500 bg-gradient-to-br from-indigo-50 to-purple-50' : 'border-gray-200 bg-white'} rounded-2xl p-6 shadow-lg transition-all" style="animation: fadeIn 0.6s ease-out ${index * 0.1}s forwards; opacity: 0;">
+            <div class="flex items-start justify-between gap-4 flex-wrap lg:flex-nowrap">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-3 mb-3 flex-wrap">
+                  ${isLeading ? `
+                    <span class="bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-md flex items-center gap-1">
+                      <span class="text-base">🏆</span> LEADING
+                    </span>
+                  ` : ''}
+                  <span class="inline-flex items-center justify-center w-8 h-8 bg-indigo-100 text-indigo-600 rounded-full font-bold text-sm">
+                    ${index + 1}
+                  </span>
+                  <h3 class="text-xl sm:text-2xl font-bold text-gray-800 flex-1">${pitch.title}</h3>
                 </div>
-                <p class="text-gray-600 mb-3">${pitch.description}</p>
+                <p class="text-gray-600 mb-4 text-base leading-relaxed">${pitch.description}</p>
                 
                 ${hasVoted ? `
-                  <div class="space-y-2">
-                    <div class="flex items-center gap-3">
-                      <div class="flex-1 bg-gray-200 rounded-full h-3 overflow-hidden">
-                        <div class="bg-indigo-600 h-full rounded-full transition-all" style="width: ${percentage}%"></div>
+                  <div class="space-y-3">
+                    <div class="flex items-center gap-4">
+                      <div class="flex-1 bg-gray-200 rounded-full h-4 overflow-hidden shadow-inner">
+                        <div class="progress-bar bg-gradient-to-r from-indigo-500 to-purple-600 h-full rounded-full" style="width: ${percentage}%"></div>
                       </div>
-                      <span class="text-sm font-medium text-gray-700 min-w-[60px]">${percentage}%</span>
+                      <span class="text-lg font-bold text-indigo-600 min-w-[70px] text-right">${percentage}%</span>
                     </div>
-                    <p class="text-sm text-gray-500">${pitch.votes} ${pitch.votes === 1 ? 'vote' : 'votes'}</p>
+                    <div class="flex items-center gap-2 text-gray-600">
+                      <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z" />
+                      </svg>
+                      <span class="font-semibold">${pitch.votes}</span>
+                      <span>${pitch.votes === 1 ? 'vote' : 'votes'}</span>
+                    </div>
                   </div>
                 ` : ''}
               </div>
@@ -137,9 +273,12 @@
               <button
                 onclick="vote(${pitch.id})"
                 ${hasVoted ? 'disabled' : ''}
-                class="${hasVoted ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700'} px-6 py-3 rounded-lg font-medium transition-all"
+                class="flex-shrink-0 ${hasVoted ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 shadow-lg hover:shadow-xl'} px-8 py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-105 active:scale-95"
               >
-                👍 Vote
+                <div class="flex items-center gap-2">
+                  <span class="text-2xl">👍</span>
+                  <span>Vote</span>
+                </div>
               </button>
             </div>
           </div>
@@ -148,8 +287,14 @@
 
       if (!hasVoted) {
         document.getElementById('tip').innerHTML = `
-          <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p class="text-blue-800 text-sm">💡 <strong>Tip:</strong> Choose wisely! You can only vote once.</p>
+          <div class="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl shadow-lg">
+            <div class="flex items-start gap-4">
+              <div class="flex-shrink-0 text-4xl">💡</div>
+              <div>
+                <p class="text-blue-900 font-bold text-lg mb-1">One Vote Per Person</p>
+                <p class="text-blue-700">Choose wisely! Once you vote, your decision is final and cannot be changed.</p>
+              </div>
+            </div>
           </div>
         `;
       }
