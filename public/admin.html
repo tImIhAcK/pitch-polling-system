@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Pitch Polling</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <div id="app" class="p-6">
+    <div class="max-w-6xl mx-auto">
+      <div id="login" class="max-w-md mx-auto bg-white rounded-xl shadow-lg p-8">
+        <h1 class="text-2xl font-bold text-gray-800 mb-4">Admin Login</h1>
+        <input
+          type="password"
+          id="password"
+          placeholder="Enter admin password"
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4"
+        />
+        <button
+          onclick="login()"
+          class="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700"
+        >
+          Login
+        </button>
+        <p id="loginError" class="text-red-600 text-sm mt-2"></p>
+      </div>
+
+      <div id="dashboard" class="hidden">
+        <div class="bg-white rounded-xl shadow-lg p-8 mb-6">
+          <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
+            <button onclick="resetVotes()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700">
+              Reset All Votes
+            </button>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="bg-blue-50 p-4 rounded-lg">
+              <p class="text-sm text-gray-600">Total Votes</p>
+              <p id="totalVotes" class="text-3xl font-bold text-blue-600">0</p>
+            </div>
+            <div class="bg-green-50 p-4 rounded-lg">
+              <p class="text-sm text-gray-600">Unique Voters</p>
+              <p id="uniqueVoters" class="text-3xl font-bold text-green-600">0</p>
+            </div>
+          </div>
+
+          <h2 class="text-xl font-bold text-gray-800 mb-4">Pitch Results</h2>
+          <div id="pitchResults" class="space-y-3"></div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-lg p-8">
+          <h2 class="text-xl font-bold text-gray-800 mb-4">Vote Log</h2>
+          <div id="voteLog" class="space-y-2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = '';
+    let adminPassword = '';
+
+    async function login() {
+      const password = document.getElementById('password').value;
+      adminPassword = password;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/admin`, {
+          headers: { 'Authorization': `Bearer ${password}` }
+        });
+
+        if (!res.ok) {
+          document.getElementById('loginError').textContent = 'Invalid password';
+          return;
+        }
+
+        document.getElementById('login').classList.add('hidden');
+        document.getElementById('dashboard').classList.remove('hidden');
+        loadDashboard();
+      } catch (error) {
+        document.getElementById('loginError').textContent = 'Login failed';
+      }
+    }
+
+    async function loadDashboard() {
+      try {
+        const res = await fetch(`${API_BASE}/api/admin`, {
+          headers: { 'Authorization': `Bearer ${adminPassword}` }
+        });
+
+        const data = await res.json();
+
+        document.getElementById('totalVotes').textContent = data.stats.totalVotes;
+        document.getElementById('uniqueVoters').textContent = data.stats.uniqueVoters;
+
+        const sorted = [...data.pitches].sort((a, b) => b.votes - a.votes);
+        const total = data.stats.totalVotes;
+
+        document.getElementById('pitchResults').innerHTML = sorted.map((pitch, index) => {
+          const percentage = total > 0 ? (pitch.votes / total * 100).toFixed(1) : 0;
+          return `
+            <div class="border border-gray-200 rounded-lg p-4">
+              <div class="flex justify-between items-start mb-2">
+                <div>
+                  ${index === 0 && pitch.votes > 0 ? '<span class="bg-yellow-400 text-xs px-2 py-1 rounded">🏆</span>' : ''}
+                  <span class="font-semibold text-gray-800">${pitch.title}</span>
+                </div>
+                <span class="text-2xl font-bold text-indigo-600">${pitch.votes}</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <div class="flex-1 bg-gray-200 rounded-full h-2">
+                  <div class="bg-indigo-600 h-full rounded-full" style="width: ${percentage}%"></div>
+                </div>
+                <span class="text-sm text-gray-600">${percentage}%</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        document.getElementById('voteLog').innerHTML = data.voteLog.slice().reverse().map(log => `
+          <div class="text-sm text-gray-600 border-b border-gray-200 py-2">
+            <span class="font-medium">Pitch ${log.pitchId}</span> - 
+            <span class="text-gray-500">${new Date(log.timestamp).toLocaleString()}</span>
+          </div>
+        `).join('');
+      } catch (error) {
+        console.error('Error loading dashboard:', error);
+      }
+    }
+
+    async function resetVotes() {
+      if (!confirm('Are you sure you want to reset all votes? This cannot be undone.')) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/admin`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${adminPassword}`
+          },
+          body: JSON.stringify({ action: 'reset' })
+        });
+
+        if (res.ok) {
+          alert('All votes have been reset');
+          loadDashboard();
+        }
+      } catch (error) {
+        alert('Failed to reset votes');
+      }
+    }
+
+    document.getElementById('password').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') login();
+    });
+  </script>
+</body>
+</html>
