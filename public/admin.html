@@ -52,7 +52,7 @@
 
         <div class="bg-white rounded-xl shadow-lg p-8">
           <h2 class="text-xl font-bold text-gray-800 mb-4">Vote Log</h2>
-          <div id="voteLog" class="space-y-2"></div>
+          <div id="voteLog" class="space-y-2 max-h-96 overflow-y-auto"></div>
         </div>
       </div>
     </div>
@@ -95,7 +95,7 @@
         document.getElementById('totalVotes').textContent = data.stats.totalVotes;
         document.getElementById('uniqueVoters').textContent = data.stats.uniqueVoters;
 
-        const sorted = [...data.pitches].sort((a, b) => b.votes - a.votes);
+        const sorted = data.pitches;
         const total = data.stats.totalVotes;
 
         document.getElementById('pitchResults').innerHTML = sorted.map((pitch, index) => {
@@ -119,9 +119,9 @@
           `;
         }).join('');
 
-        document.getElementById('voteLog').innerHTML = data.voteLog.slice().reverse().map(log => `
+        document.getElementById('voteLog').innerHTML = data.voteLog.map(log => `
           <div class="text-sm text-gray-600 border-b border-gray-200 py-2">
-            <span class="font-medium">Pitch ${log.pitchId}</span> - 
+            <span class="font-medium">${log.pitchTitle}</span> - 
             <span class="text-gray-500">${new Date(log.timestamp).toLocaleString()}</span>
           </div>
         `).join('');

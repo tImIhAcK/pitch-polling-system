@@ -1,6 +1,6 @@
-import { kv } from '@vercel/kv';
+import { getDb } from '../lib/db.js';
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123'; // Set this in Vercel env vars
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -17,17 +17,37 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  const sql = getDb();
+
   if (req.method === 'GET') {
     try {
-      const pitches = await kv.get('pitches') || [];
-      const voteLog = await kv.get('vote_log') || [];
-      
+      // Get all pitches with votes
+      const pitches = await sql`
+        SELECT id, title, description, votes 
+        FROM pitches 
+        ORDER BY votes DESC
+      `;
+
+      // Get vote log
+      const voteLog = await sql`
+        SELECT v.voter_id, v.pitch_id, v.voted_at, p.title
+        FROM voters v
+        JOIN pitches p ON v.pitch_id = p.id
+        ORDER BY v.voted_at DESC
+      `;
+
+      // Calculate stats
       const totalVotes = pitches.reduce((sum, p) => sum + p.votes, 0);
       const uniqueVoters = voteLog.length;
 
       return res.status(200).json({
         pitches,
-        voteLog,
+        voteLog: voteLog.map(v => ({
+          pitchId: v.pitch_id,
+          pitchTitle: v.title,
+          voterId: v.voter_id,
+          timestamp: v.voted_at
+        })),
         stats: {
           totalVotes,
           uniqueVoters
@@ -44,18 +64,11 @@ export default async function handler(req, res) {
 
     if (action === 'reset') {
       try {
-        // Reset all votes
-        const pitches = await kv.get('pitches');
-        const resetPitches = pitches.map(p => ({ ...p, votes: 0 }));
+        // Delete all votes
+        await sql`DELETE FROM voters`;
         
-        await kv.set('pitches', resetPitches);
-        await kv.set('vote_log', []);
-        
-        // Delete all voter records
-        const keys = await kv.keys('voter:*');
-        for (const key of keys) {
-          await kv.del(key);
-        }
+        // Reset vote counts
+        await sql`UPDATE pitches SET votes = 0`;
 
         return res.status(200).json({ success: true, message: 'All votes reset' });
       } catch (error) {

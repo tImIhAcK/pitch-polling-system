@@ -1,4 +1,4 @@
-import { kv } from '@vercel/kv';
+import { getDb } from '../lib/db.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -17,34 +17,40 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Missing pitchId or voterId' });
       }
 
+      const sql = getDb();
+
       // Check if user has already voted
-      const hasVoted = await kv.get(`voter:${voterId}`);
-      if (hasVoted) {
-        return res.status(403).json({ error: 'Already voted', votedPitchId: hasVoted });
+      const existingVote = await sql`
+        SELECT pitch_id FROM voters WHERE voter_id = ${voterId}
+      `;
+
+      if (existingVote.length > 0) {
+        return res.status(403).json({ 
+          error: 'Already voted', 
+          votedPitchId: existingVote[0].pitch_id 
+        });
       }
 
-      // Get current pitches
-      const pitches = await kv.get('pitches');
-      
-      // Update vote count
-      const updatedPitches = pitches.map(pitch => 
-        pitch.id === pitchId ? { ...pitch, votes: pitch.votes + 1 } : pitch
-      );
+      // Start transaction: record vote and increment counter
+      await sql`
+        INSERT INTO voters (voter_id, pitch_id) 
+        VALUES (${voterId}, ${pitchId})
+      `;
 
-      // Save updated pitches and voter record
-      await kv.set('pitches', updatedPitches);
-      await kv.set(`voter:${voterId}`, pitchId);
+      await sql`
+        UPDATE pitches 
+        SET votes = votes + 1 
+        WHERE id = ${pitchId}
+      `;
 
-      // Log vote for admin
-      const voteLog = await kv.get('vote_log') || [];
-      voteLog.push({
-        pitchId,
-        voterId,
-        timestamp: new Date().toISOString()
-      });
-      await kv.set('vote_log', voteLog);
+      // Get updated pitches
+      const pitches = await sql`
+        SELECT id, title, description, votes 
+        FROM pitches 
+        ORDER BY id ASC
+      `;
 
-      return res.status(200).json({ success: true, pitches: updatedPitches });
+      return res.status(200).json({ success: true, pitches });
     } catch (error) {
       console.error('Error processing vote:', error);
       return res.status(500).json({ error: 'Failed to process vote' });
